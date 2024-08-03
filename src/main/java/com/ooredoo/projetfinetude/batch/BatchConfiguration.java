@@ -31,8 +31,9 @@ import org.springframework.validation.BindException;
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
-
+import java.util.List;
 
 
 @Configuration
@@ -55,7 +56,13 @@ public class BatchConfiguration  {
     @Autowired
     private JobBuilderFactory jobBuilderFactory;
 
+    private static final List<SimpleDateFormat> dateFormats = new ArrayList<>();
 
+    static {
+        dateFormats.add(new SimpleDateFormat("yyyy-MM-dd"));
+        dateFormats.add(new SimpleDateFormat("dd-MM-yyyy"));
+        dateFormats.add(new SimpleDateFormat("dd/MM/yyyy"));
+    }
 
     public FlatFileItemReader<ReportedDataVol> reader(Resource resource) {
         // Create a new FlatFileItemReader instance
@@ -136,11 +143,14 @@ public class BatchConfiguration  {
             if (value == null || value.trim().isEmpty()) {
                 return null;
             }
-            try {
-                return dateFormat.parse(value);
-            } catch (ParseException | java.text.ParseException e) {
-                throw new IllegalArgumentException("Invalid date format for field " + fieldName + ": " + value, e);
+            for (SimpleDateFormat dateFormat : dateFormats) {
+                try {
+                    return dateFormat.parse(value);
+                } catch (ParseException | java.text.ParseException e) {
+                    // Continue to next format
+                }
             }
+            throw new IllegalArgumentException("Invalid date format for field " + fieldName + ": " + value);
         }
 
         private Double getDoubleField(FieldSet fieldSet, String fieldName) {

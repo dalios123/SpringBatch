@@ -1,9 +1,6 @@
 package com.ooredoo.projetfinetude.batch;
 
-import org.springframework.batch.core.Job;
-import org.springframework.batch.core.JobParameters;
-import org.springframework.batch.core.JobParametersBuilder;
-import org.springframework.batch.core.Step;
+import org.springframework.batch.core.*;
 import org.springframework.batch.core.explore.JobExplorer;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,7 +34,7 @@ public class ScheduledJobLauncher {
 
 
 
-    @Scheduled(cron = "0 07 17 * * ?")
+    @Scheduled(cron = "0 21 15 * * ?")
     public void runJob() throws IOException {
         String directoryPath = "C:/Users/lenovo/OneDrive/Bureau/reportss/";
         List<Resource> newFiles = fileUtil.getNewFiles(directoryPath);
@@ -48,7 +45,7 @@ public class ScheduledJobLauncher {
             String filePath = file.getFile().getAbsolutePath();
             System.out.println(filePath);
             // Check if a job with the same file path has been executed
-            if (isJobExecuted(filePath)) {
+            if (isJobCompleted(filePath)) {
                 System.out.println("Job for file " + file + " has already been executed.");
                 continue;
             }
@@ -73,10 +70,11 @@ public class ScheduledJobLauncher {
             }
         }
     }
-    private boolean isJobExecuted(String filePath) {
+    private boolean isJobCompleted(String filePath) {
         return jobExplorer.findJobInstancesByJobName("importUserJob", 0, Integer.MAX_VALUE).stream()
                 .flatMap(jobInstance -> jobExplorer.getJobExecutions(jobInstance).stream())
-                .flatMap(jobExecution -> jobExecution.getJobParameters().getParameters().entrySet().stream())
-                .anyMatch(param -> "filePath".equals(param.getKey()) && filePath.equals(param.getValue().getValue()));
+                .filter(jobExecution -> jobExecution.getJobParameters().getParameters().entrySet().stream()
+                        .anyMatch(param -> "filePath".equals(param.getKey()) && filePath.equals(param.getValue().getValue())))
+                .anyMatch(jobExecution -> jobExecution.getStatus() == BatchStatus.COMPLETED);
     }
 }
